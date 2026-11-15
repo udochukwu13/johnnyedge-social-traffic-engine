@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Safe URL parsing fallback for static build analyzer
-    let searchParams = new URL(request.url || 'http://localhost').searchParams;
+    // Safely extract search params without triggering prerender bailout
+    const urlString = request?.url || 'http://localhost/api/analytics';
+    const { searchParams } = new URL(urlString);
     const workspaceId = searchParams.get('workspaceId') || 'test_workspace_1';
 
     // Fetch overall click count and recent clicks
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
     }, { status: 200 });
 
   } catch (error: any) {
-    console.error('Analytics API Execution Error:', error);
+    console.error('Analytics API Error:', error);
     return NextResponse.json({ 
       success: true, 
       analytics: { totalClicks: 0, byReferrer: [], recentClicks: [] } 
