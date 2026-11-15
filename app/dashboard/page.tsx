@@ -5,10 +5,12 @@ import { useState, useEffect } from 'react';
 export default function DashboardPage() {
   const [leads, setLeads] = useState([]);
   const [analytics, setAnalytics] = useState<any>({ totalClicks: 0, byReferrer: [], recentClicks: [] });
+  const [domains, setDomains] = useState<any[]>([]);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [qrUrl, setQrUrl] = useState('https://johnnyedge-social-traffic-engine.vercel.app/go/my-portfolio');
+  const [newDomain, setNewDomain] = useState('');
 
   useEffect(() => {
     // Fetch leads
@@ -26,6 +28,14 @@ export default function DashboardPage() {
         if (data.success) setAnalytics(data.analytics);
       })
       .catch((err) => console.error('Error fetching analytics:', err));
+
+    // Fetch custom domains
+    fetch('/api/domains?workspaceId=test_workspace_1')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setDomains(data.domains || []);
+      })
+      .catch((err) => console.error('Error fetching domains:', err));
   }, []);
 
   const handleAskAI = async (e: React.FormEvent) => {
@@ -49,6 +59,27 @@ export default function DashboardPage() {
       setAiResponse('Network error connecting to AI engine.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddDomain = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/domains', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ workspaceId: 'test_workspace_1', domain: newDomain })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Domain registered successfully! Please point your CNAME record to cname.vercel-dns.com');
+        setDomains([data.customDomain, ...domains]);
+        setNewDomain('');
+      } else {
+        alert(data.error || 'Failed to register domain');
+      }
+    } catch (err) {
+      alert('Error registering domain');
     }
   };
 
@@ -109,7 +140,7 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* QR Code Generator Section */}
+        {/* Campaign QR Code Generator Section */}
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-xl">
           <h2 className="text-xl font-bold mb-3 text-indigo-300">📱 Campaign QR Code Generator</h2>
           <p className="text-sm text-gray-400 mb-4">Generate instant scannable QR codes for Instagram Stories, TikTok overlays, and physical flyers.</p>
@@ -132,6 +163,45 @@ export default function DashboardPage() {
               <span className="text-xs text-gray-600 mt-2 font-medium">Scan to test traffic</span>
             </div>
           </div>
+        </div>
+
+        {/* Custom Domain Manager Section (Agency Tier) */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-xl">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-xl font-bold text-indigo-300">🌐 Agency Custom Domain Mapping</h2>
+            <span className="bg-purple-950 text-purple-300 border border-purple-800/50 px-3 py-1 rounded-full text-xs font-semibold">Agency Tier</span>
+          </div>
+          <p className="text-sm text-gray-400 mb-4">Map your brand's custom tracking domain (e.g., tr.brandname.com) to replace default Vercel URLs.</p>
+          
+          <form onSubmit={handleAddDomain} className="space-y-4">
+            <div className="flex gap-4">
+              <input
+                type="text"
+                required
+                value={newDomain}
+                onChange={(e) => setNewDomain(e.target.value)}
+                className="flex-1 bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-indigo-500"
+                placeholder="tr.yourbrand.com"
+              />
+              <button
+                type="submit"
+                className="bg-purple-600 hover:bg-purple-500 text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-all"
+              >
+                Add Domain
+              </button>
+            </div>
+          </form>
+
+          {domains.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {domains.map((d: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-center bg-gray-950 border border-gray-800 p-3 rounded-lg text-sm">
+                  <span className="font-mono text-indigo-200">{d.domain}</span>
+                  <span className="bg-amber-950 text-amber-400 border border-amber-800/50 px-2.5 py-1 rounded-full text-xs">{d.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* CRM Leads Table Section */}
