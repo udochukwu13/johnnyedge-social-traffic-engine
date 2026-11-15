@@ -34,7 +34,7 @@ export default function AdminDashboardPage() {
   return (
     <main className="min-h-screen bg-gray-950 text-white p-8">
       <div className="max-w-6xl mx-auto space-y-8">
-        
+
         {/* Navigation & Header */}
         <div className="flex justify-between items-center border-b border-gray-800 pb-4">
           <Link href="/dashboard" className="text-indigo-400 hover:underline text-sm font-medium">
