@@ -87,13 +87,21 @@ export default function DashboardPage() {
     <main className="min-h-screen bg-gray-950 text-white p-8">
       <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* Header */}
+        {/* Header & Quick Navigation */}
         <div className="flex justify-between items-center border-b border-gray-800 pb-6">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-indigo-400">JohnnyEdge Social Traffic Engine</h1>
             <p className="text-gray-400 text-sm mt-1">Enterprise Creator & Business Dashboard</p>
           </div>
-          <span className="bg-indigo-900/50 text-indigo-300 border border-indigo-700/50 px-4 py-1.5 rounded-full text-xs font-semibold">Pro Active</span>
+          <div className="flex items-center gap-3">
+            <a 
+              href="/analytics" 
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-4 py-2 rounded-lg text-xs transition-all flex items-center gap-1.5 shadow-lg"
+            >
+              📊 View Detailed Analytics &rarr;
+            </a>
+            <span className="bg-indigo-900/50 text-indigo-300 border border-indigo-700/50 px-4 py-1.5 rounded-full text-xs font-semibold">Pro Active</span>
+          </div>
         </div>
 
         {/* Analytics Summary Cards */}
