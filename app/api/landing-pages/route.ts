@@ -19,13 +19,14 @@ export async function POST(request: NextRequest) {
 
     const pageUserId = userId || 'default_user';
     const pageTheme = theme || 'modern';
+    const pageContent = JSON.stringify(content || {});
 
     // Insert landing page into Neon PostgreSQL database
     const result = await db.query(
       `INSERT INTO landing_pages (user_id, title, slug, content, theme, created_at)
        VALUES ($1, $2, $3, $4, $5, NOW())
        RETURNING *`,
-      [pageUserId, title, slug, content || {}, pageTheme]
+      [pageUserId, title, slug, pageContent, pageTheme]
     );
 
     return NextResponse.json({ 
@@ -35,7 +36,6 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Landing Pages API Error:', error);
-    // Handle unique slug constraint violation gracefully
     if (error.code === '23505') {
       return NextResponse.json({ error: 'Landing page slug already exists' }, { status: 409 });
     }
