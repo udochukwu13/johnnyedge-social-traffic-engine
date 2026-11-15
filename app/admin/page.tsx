@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-
+export const dynamic = 'force-dynamic';
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<any>({ workspaces: 0, campaigns: 0, totalClicks: 0, totalLeads: 0 });
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
