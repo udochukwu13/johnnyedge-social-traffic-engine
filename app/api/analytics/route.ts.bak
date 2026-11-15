@@ -1,0 +1,89 @@
+
+import { NextRequest, NextResponse } from 'next/server';
+import { pool } from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+export const revalidate = 0;
+
+export async function GET(request: NextRequest) {
+  try {
+    const workspaceId =
+      request.nextUrl.searchParams.get('workspaceId') ||
+      'test_workspace_1';
+
+    // 1. Fetch total clicks for this workspace
+    const summaryResult = await pool.query(
+      `SELECT COUNT(*) AS total_clicks
+       FROM link_clicks tc
+       JOIN tracking_links tl
+         ON tc.tracking_link_id = tl.id
+       WHERE tl.workspace_id = $1`,
+      [workspaceId]
+    );
+
+    // 2. Fetch clicks grouped by referrer
+    const referrerResult = await pool.query(
+      `SELECT
+         COALESCE(tc.referrer, 'Direct / Unknown') AS source,
+         COUNT(*) AS count
+       FROM link_clicks tc
+       JOIN tracking_links tl
+         ON tc.tracking_link_id = tl.id
+       WHERE tl.workspace_id = $1
+       GROUP BY tc.referrer
+       ORDER BY count DESC
+       LIMIT 5`,
+      [workspaceId]
+    );
+
+    // 3. Fetch the 10 most recent clicks
+    const recentClicksResult = await pool.query(
+      `SELECT
+         tc.id,
+         tl.slug,
+         tc.ip_address,
+         tc.user_agent,
+         tc.referrer,
+         tc.clicked_at
+       FROM link_clicks tc
+       JOIN tracking_links tl
+         ON tc.tracking_link_id = tl.id
+       WHERE tl.workspace_id = $1
+       ORDER BY tc.clicked_at DESC
+       LIMIT 10`,
+      [workspaceId]
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        analytics: {
+          workspaceId,
+          totalClicks: Number(
+            summaryResult.rows[0]?.total_clicks || 0
+          ),
+          byReferrer: referrerResult.rows,
+          recentClicks: recentClicksResult.rows,
+        },
+      },
+      { status: 200 }
+    );
+
+  } catch (error) {
+    console.error('Analytics API Error:', error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Unable to load analytics data.',
+        analytics: {
+          totalClicks: 0,
+          byReferrer: [],
+          recentClicks: [],
+        },
+      },
+      { status: 500 }
+    );
+  }
+}
