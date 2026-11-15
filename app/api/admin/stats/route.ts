@@ -6,22 +6,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const adminKey = searchParams.get('key');
 
-    // Simple admin security verification (can be tightened with role-based checks)
     if (adminKey !== process.env.ADMIN_SECRET_KEY && adminKey !== 'johnnyedge_admin_2026') {
       return NextResponse.json({ error: 'Unauthorized: Invalid Admin Key' }, { status: 403 });
     }
 
-    // Fetch platform summary counts
     const workspacesCount = await pool.query(`SELECT COUNT(*) as count FROM workspaces`, []);
     const campaignsCount = await pool.query(`SELECT COUNT(*) as count FROM campaigns`, []);
     const clicksCount = await pool.query(`SELECT COUNT(*) as count FROM link_clicks`, []);
     const leadsCount = await pool.query(`SELECT COUNT(*) as count FROM leads`, []);
 
-    // Fetch recent audit logs or activities
     const auditLogs = await pool.query(
       `SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 10`,
       []
-    ).catch(() => ({ rows: [] })); // Fallback if audit_logs table isn't created yet
+    ).catch(() => ({ rows: [] }));
 
     return NextResponse.json({
       success: true,
