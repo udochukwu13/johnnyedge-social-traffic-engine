@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { nanoid } from "nanoid";
 import { checkWorkspaceEntitlement } from "@/lib/entitlements";
-
+export const dynamic = 'force-dynamic';
 export async function POST(request: Request) {
   const client = await pool.connect();
   try {
