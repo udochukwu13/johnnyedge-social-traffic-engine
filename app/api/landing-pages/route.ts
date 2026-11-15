@@ -19,7 +19,8 @@ export async function POST(request: NextRequest) {
 
     const pageUserId = userId || 'default_user';
     const pageTheme = theme || 'modern';
-    const pageContent = JSON.stringify(content || {});
+    // Ensure content is serialized properly if it's an object
+    const pageContent = typeof content === 'string' ? content : JSON.stringify(content || {});
 
     // Insert landing page into Neon PostgreSQL database
     const result = await db.query(
@@ -39,7 +40,8 @@ export async function POST(request: NextRequest) {
     if (error.code === '23505') {
       return NextResponse.json({ error: 'Landing page slug already exists' }, { status: 409 });
     }
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    // Return the actual error message for debugging
+    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }
 
@@ -61,6 +63,6 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Fetch Landing Pages Error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
   }
 }
