@@ -1,14 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+ import { NextRequest, NextResponse } from 'next/server';
 import { pool } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Safely extract search params without triggering prerender bailout
-    const urlString = request?.url || 'http://localhost/api/analytics';
-    const { searchParams } = new URL(urlString);
-    const workspaceId = searchParams.get('workspaceId') || 'test_workspace_1';
+    const workspaceId = request.nextUrl.searchParams.get('workspaceId') || 'test_workspace_1';
 
     // Fetch overall click count and recent clicks
     const summaryResult = await pool.query(
