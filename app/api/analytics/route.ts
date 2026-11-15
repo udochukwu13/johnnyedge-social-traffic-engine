@@ -1,0 +1,50 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { pool } from '@/lib/db';
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const workspaceId = searchParams.get('workspaceId') || 'test_workspace_1';
+
+    // Fetch overall click count and recent clicks
+    const summaryResult = await pool.query(
+      `SELECT COUNT(*) as total_clicks 
+       FROM link_clicks tc
+       JOIN tracking_links tl ON tc.tracking_link_id = tl.id`,
+      []
+    );
+
+    // Fetch clicks grouped by referrer (social platform source)
+    const referrerResult = await pool.query(
+      `SELECT COALESCE(referrer, 'Direct / Unknown') as source, COUNT(*) as count 
+       FROM link_clicks 
+       GROUP BY referrer 
+       ORDER BY count DESC 
+       LIMIT 5`,
+      []
+    );
+
+    // Fetch recent click logs
+    const recentClicksResult = await pool.query(
+      `SELECT tc.id, tl.slug, tc.ip_address, tc.user_agent, tc.referrer, tc.clicked_at 
+       FROM link_clicks tc
+       JOIN tracking_links tl ON tc.tracking_link_id = tl.id
+       ORDER BY tc.clicked_at DESC 
+       LIMIT 10`,
+      []
+    );
+
+    return NextResponse.json({
+      success: true,
+      analytics: {
+        totalClicks: summaryResult.rows[0]?.total_clicks || 0,
+        byReferrer: referrerResult.rows,
+        recentClicks: recentClicksResult.rows,
+      }
+    }, { status: 200 });
+
+  } catch (error: any) {
+    console.error('Analytics API Error:', error);
+    return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+  }
+}

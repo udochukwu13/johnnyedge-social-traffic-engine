@@ -4,18 +4,28 @@ import { useState, useEffect } from 'react';
 
 export default function DashboardPage() {
   const [leads, setLeads] = useState([]);
+  const [analytics, setAnalytics] = useState<any>({ totalClicks: 0, byReferrer: [], recentClicks: [] });
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [qrUrl, setQrUrl] = useState('https://johnnyedge-social-traffic-engine.vercel.app/go/my-portfolio');
 
   useEffect(() => {
+    // Fetch leads
     fetch('/api/leads')
       .then((res) => res.json())
       .then((data) => {
         if (data.success) setLeads(data.leads || []);
       })
       .catch((err) => console.error('Error fetching leads:', err));
+
+    // Fetch analytics
+    fetch('/api/analytics')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) setAnalytics(data.analytics);
+      })
+      .catch((err) => console.error('Error fetching analytics:', err));
   }, []);
 
   const handleAskAI = async (e: React.FormEvent) => {
@@ -53,6 +63,22 @@ export default function DashboardPage() {
             <p className="text-gray-400 text-sm mt-1">Enterprise Creator & Business Dashboard</p>
           </div>
           <span className="bg-indigo-900/50 text-indigo-300 border border-indigo-700/50 px-4 py-1.5 rounded-full text-xs font-semibold">Pro Active</span>
+        </div>
+
+        {/* Analytics Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-xl">
+            <h3 className="text-sm font-medium text-gray-400">Total Tracking Clicks</h3>
+            <p className="text-4xl font-black text-indigo-400 mt-2">{analytics.totalClicks}</p>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-xl">
+            <h3 className="text-sm font-medium text-gray-400">Captured Leads</h3>
+            <p className="text-4xl font-black text-emerald-400 mt-2">{leads.length}</p>
+          </div>
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-xl">
+            <h3 className="text-sm font-medium text-gray-400">Active Campaigns</h3>
+            <p className="text-4xl font-black text-amber-400 mt-2">1</p>
+          </div>
         </div>
 
         {/* AI Marketing Assistant Section */}
@@ -123,13 +149,21 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                  <td className="py-3 px-4 font-medium">Sarah Connor</td>
-                  <td className="py-3 px-4 text-gray-300">sarah@example.com</td>
-                  <td className="py-3 px-4 text-gray-300">+2348012345678</td>
-                  <td className="py-3 px-4"><span className="bg-emerald-950 text-emerald-400 border border-emerald-800/50 px-2.5 py-1 rounded-full text-xs">New</span></td>
-                  <td className="py-3 px-4 text-gray-400">2026-11-14</td>
-                </tr>
+                {leads.length > 0 ? (
+                  leads.map((lead: any, idx: number) => (
+                    <tr key={idx} className="border-b border-gray-800/50 hover:bg-gray-800/30">
+                      <td className="py-3 px-4 font-medium">{lead.name || 'N/A'}</td>
+                      <td className="py-3 px-4 text-gray-300">{lead.email}</td>
+                      <td className="py-3 px-4 text-gray-300">{lead.phone || 'N/A'}</td>
+                      <td className="py-3 px-4"><span className="bg-emerald-950 text-emerald-400 border border-emerald-800/50 px-2.5 py-1 rounded-full text-xs">{lead.status}</span></td>
+                      <td className="py-3 px-4 text-gray-400">{new Date(lead.created_at).toLocaleDateString()}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center text-gray-500">No leads captured yet.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
