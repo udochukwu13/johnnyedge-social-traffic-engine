@@ -1,78 +1,66 @@
-import { NextResponse } from "next/server";
-import { pool } from "@/lib/db";
-import { nanoid } from "nanoid";
-import { checkWorkspaceEntitlement } from "@/lib/entitlements";
+import { NextRequest, NextResponse } from 'next/server';
+import { pool as db } from '@/lib/db';
 
-export async function POST(request: Request) {
-  const client = await pool.connect();
+// POST: Create/Publish a new landing page
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { workspaceId, campaignId, title, themeConfig, blocks } = body;
-
-    if (!workspaceId || !title) {
-      return NextResponse.json(
-        { error: "Missing required fields: workspaceId or title" },
-        { status: 400 }
-      );
+    let body;
+    try {
+      body = await request.json();
+    } catch (e) {
+      return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
     }
 
-    // 1. Enforce subscription tier entitlements
-    const entitlement = await checkWorkspaceEntitlement(workspaceId, "landing_pages_created");
-    if (!entitlement.allowed) {
-      return NextResponse.json({ error: entitlement.error }, { status: 403 });
+    const { userId, title, slug, content, theme } = body;
+
+    if (!title || !slug) {
+      return NextResponse.json({ error: 'Title and slug are required' }, { status: 400 });
     }
 
-    await client.query("BEGIN");
+    const pageUserId = userId || 'default_user';
+    const pageTheme = theme || 'modern';
 
-    const slug = nanoid(10).toLowerCase();
-
-    const insertQuery = `
-      INSERT INTO landing_pages (workspace_id, campaign_id, title, slug, status, theme_config, blocks)
-      VALUES ($1, $2, $3, $4, 'published', $5, $6)
-      RETURNING *;
-    `;
-
-    const values = [
-      workspaceId,
-      campaignId || null,
-      title,
-      slug,
-      JSON.stringify(themeConfig || {}),
-      JSON.stringify(blocks || []),
-    ];
-
-    const result = await client.query(insertQuery, values);
-    const newPage = result.rows[0];
-
-    // 2. Increment workspace landing page usage counter
-    await client.query(
-      `INSERT INTO workspace_usage (workspace_id, landing_pages_created) 
-       VALUES ($1, 1) 
-       ON CONFLICT (workspace_id) 
-       DO UPDATE SET landing_pages_created = workspace_usage.landing_pages_created + 1, updated_at = CURRENT_TIMESTAMP`,
-      [workspaceId]
+    // Insert landing page into Neon PostgreSQL database
+    const result = await db.query(
+      `INSERT INTO landing_pages (user_id, title, slug, content, theme, created_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       RETURNING *`,
+      [pageUserId, title, slug, content || {}, pageTheme]
     );
 
-    await client.query("COMMIT");
+    return NextResponse.json({ 
+      success: true, 
+      landingPage: result.rows[0] 
+    }, { status: 201 });
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          ...newPage,
-          publicUrl: `https://${process.env.NEXT_PUBLIC_DOMAIN || "johnnyedgelimited.com"}/p/${newPage.slug}`,
-        },
-      },
-      { status: 201 }
-    );
   } catch (error: any) {
-    await client.query("ROLLBACK");
-    console.error("Error creating landing page:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error", details: error.message },
-      { status: 500 }
+    console.error('Landing Pages API Error:', error);
+    // Handle unique slug constraint violation gracefully
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'Landing page slug already exists' }, { status: 409 });
+    }
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+// GET: Fetch landing pages for a user
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId') || 'default_user';
+
+    const result = await db.query(
+      `SELECT * FROM landing_pages WHERE user_id = $1 ORDER BY created_at DESC`,
+      [userId]
     );
-  } finally {
-    client.release();
+
+    return NextResponse.json({ 
+      success: true, 
+      landingPages: result.rows 
+    }, { status: 200 });
+
+  } catch (error: any) {
+    console.error('Fetch Landing Pages Error:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
