@@ -16,27 +16,27 @@ export async function POST(request: Request) {
       if (event.event === "charge.success" || event.event === "subscription.create") {
         const email = event.data.customer?.email || event.data.email;
         const subscriptionCode = event.data.subscription_code || event.data.plan?.plan_code;
+        const workspaceId = event.data.metadata?.workspaceId || event.data.metadata?.workspace_id;
 
-        if (email) {
+        if (workspaceId || email) {
           await client.query(
-            `UPDATE subscriptions s
+            `UPDATE subscriptions 
              SET status = 'active', 
                  paystack_subscription_code = COALESCE($1, paystack_subscription_code), 
                  current_period_end = NOW() + INTERVAL '1 month'
-             FROM organizations o
-             WHERE s.organization_id = o.id AND o.owner_id IN (SELECT id FROM users WHERE email = $2)`,
-            [subscriptionCode, email]
+             WHERE workspace_id = $2 OR workspace_id IN (SELECT workspace_id FROM organizations WHERE owner_email = $3)`,
+            [subscriptionCode, workspaceId || '', email || '']
           );
         }
       } else if (event.event === "invoice.payment_failed" || event.event === "subscription.disable") {
         const email = event.data.customer?.email;
-        if (email) {
+        const workspaceId = event.data.metadata?.workspaceId;
+        if (workspaceId || email) {
           await client.query(
-            `UPDATE subscriptions s
+            `UPDATE subscriptions 
              SET status = 'past_due'
-             FROM organizations o
-             WHERE s.organization_id = o.id AND o.owner_id IN (SELECT id FROM users WHERE email = $1)`,
-            [email]
+             WHERE workspace_id = $1 OR workspace_id IN (SELECT workspace_id FROM organizations WHERE owner_email = $2)`,
+            [workspaceId || '', email || '']
           );
         }
       }
