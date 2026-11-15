@@ -7,8 +7,8 @@ export default function DashboardPage() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [loading, setLoading] = useState(false);
+  const [qrUrl, setQrUrl] = useState('https://johnnyedge-social-traffic-engine.vercel.app/go/my-portfolio');
 
-  // Fetch leads on load
   useEffect(() => {
     fetch('/api/leads')
       .then((res) => res.json())
@@ -18,7 +18,6 @@ export default function DashboardPage() {
       .catch((err) => console.error('Error fetching leads:', err));
   }, []);
 
-  // Handle AI Recommendation submission
   const handleAskAI = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -82,6 +81,31 @@ export default function DashboardPage() {
               {aiResponse}
             </div>
           )}
+        </div>
+
+        {/* QR Code Generator Section */}
+        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-xl">
+          <h2 className="text-xl font-bold mb-3 text-indigo-300">📱 Campaign QR Code Generator</h2>
+          <p className="text-sm text-gray-400 mb-4">Generate instant scannable QR codes for Instagram Stories, TikTok overlays, and physical flyers.</p>
+          
+          <div className="space-y-4">
+            <input
+              type="text"
+              className="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-indigo-500"
+              value={qrUrl}
+              onChange={(e) => setQrUrl(e.target.value)}
+              placeholder="Enter tracking link URL..."
+            />
+
+            <div className="flex flex-col items-center justify-center bg-white p-6 rounded-lg w-48 mx-auto shadow-md">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(qrUrl)}`}
+                alt="Tracking Link QR Code"
+                className="w-36 h-36 object-contain"
+              />
+              <span className="text-xs text-gray-600 mt-2 font-medium">Scan to test traffic</span>
+            </div>
+          </div>
         </div>
 
         {/* CRM Leads Table Section */}
